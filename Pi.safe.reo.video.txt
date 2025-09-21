@@ -1,0 +1,89 @@
+
+Got it—two issues jump out:
+
+1. Your folder name looks misspelled: it should be `~/.config/autostart` (you wrote `austostart`).
+2. Launching VLC directly won’t wait for Wi-Fi/camera. Point the desktop entry at a small “wait-then-run” script instead.
+
+Here’s a clean fix.
+
+---
+
+# 1) Put the desktop file in the right place
+
+```bash
+mkdir -p /home/jim/.config/autostart
+nano /home/jim/.config/autostart/reolink.desktop
+```
+
+Paste:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Reolink Stream
+Exec=/home/jim/start_reolink.sh
+StartupNotify=false
+Terminal=false
+```
+
+# 2) Create the wait-and-run script
+
+```bash
+nano /home/jim/start_reolink.sh
+```
+
+```bash
+#!/usr/bin/env bash
+CAM_IPS=("192.168.86.27" "192.168.86.24")   # try both if your doorbell reports two IPs
+RTSP_PATH="h264Preview_01_main"
+USER="admin"
+PASS="soup8080"                              # URL-encode if it ever has @ : / etc.
+
+LOG="$HOME/reolink_autostart.log"
+
+echo "$(date) boot: waiting for Wi-Fi + route…" >> "$LOG"
+
+# Wait for wlan0 to have IPv4 and SSID
+for i in {1..60}; do
+  ip -4 addr show wlan0 | grep -q 'inet ' && [ -n "$(iwgetid -r)" ] && break
+  sleep 2
+done
+
+# Wait for default route
+for i in {1..30}; do
+  ip route | grep -q '^default ' && break
+  sleep 1
+done
+
+# Pick the first camera IP that answers on 554
+CAM_IP=""
+for ip in "${CAM_IPS[@]}"; do
+  if nc -z -w1 "$ip" 554 2>/dev/null; then CAM_IP="$ip"; break; fi
+done
+
+if [ -z "$CAM_IP" ]; then
+  echo "$(date) no camera answering on 554; will still try VLC loop…" >> "$LOG"
+fi
+
+URL="rtsp://${USER}:${PASS}@${CAM_IP:-${CAM_IPS[0]}}:554/${RTSP_PATH}"
+
+# Run VLC in a retry loop so it recovers from drops
+while true; do
+  echo "$(date) launching VLC → $URL" >> "$LOG"
+  cvlc --fullscreen --no-video-title-show --network-caching=300 "$URL"
+  echo "$(date) VLC exited; retrying in 5s…" >> "$LOG"
+  sleep 5
+done
+```
+
+Make it executable and install `nc`:
+
+```bash
+chmod +x /home/jim/start_reolink.sh
+sudo apt update && sudo apt install -y netcat-openbsd
+```
+
+Reboot and it should start only after Wi-Fi is up and the camera is answering.
+(Quick-and-dirty alternative: change your current Exec to `bash -lc 'sleep 20; cvlc --fullscreen …'`, but the script above is much more reliable.)
+
+If your password ever includes special characters like `@` or `:`, URL-encode them in the URL (e.g., `@` → `%40`).
