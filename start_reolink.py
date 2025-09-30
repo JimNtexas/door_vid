@@ -9,6 +9,7 @@ import subprocess
 from logging.handlers import RotatingFileHandler
 
 #9/29/2025
+#git kinda messed up
 
 # --- Configuration (prefer env vars) ---
 CAM_IPS = os.getenv("REOLINK_IPS", "192.168.86.27,192.168.86.24").split(",")
