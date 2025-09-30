@@ -8,6 +8,8 @@ import logging
 import subprocess
 from logging.handlers import RotatingFileHandler
 
+#9/29/2025
+
 # --- Configuration (prefer env vars) ---
 CAM_IPS = os.getenv("REOLINK_IPS", "192.168.86.27,192.168.86.24").split(",")
 RTSP_PATH = os.getenv("REOLINK_RTSP_PATH", "h264Preview_01_main")
