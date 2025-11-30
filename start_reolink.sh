@@ -1,44 +1,33 @@
 #!/usr/bin/env bash
-CAM_IPS=("192.168.86.27" "192.168.86.24")   # try both if your doorbell reports two IPs
-RTSP_PATH="h264Preview_01_main"
-USER="admin"
-PASS="soup8080"                              # URL-encode if it ever has @ : / etc.
-RETRY_INTERVAL
 
-LOG="$HOME/reolink_autostart.log"
+# This script is a launcher for the more robust Python script.
+# Configure settings via environment variables, not by editing this file.
 
-echo "$(date) boot: waiting for Wi-Fi + route�" >> "$LOG"
+# --- Environment Variables ---
+# Set these in your environment (e.g., in /etc/environment or a systemd service file)
+#
+# export REOLINK_IPS="192.168.86.27,192.168.86.24"
+# export REOLINK_RTSP_PATH="h264Preview_01_main"
+# export REOLINK_USER="admin"
+# export REOLINK_PASS="XXXXX"
+# export REOLINK_LOG="~/reolink_autostart.log"
+# export REOLINK_FULLSCREEN="1"
+# export REOLINK_VLC_ARGS="--avcodec-hw=drm_prime" # Example for Pi
 
-exho "waiting for wifi"
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Wait for wlan0 to have IPv4 and SSID
-for i in {1..60}; do
-  ip -4 addr show wlan0 | grep -q 'inet ' && [ -n "$(iwgetid -r)" ] && break
-  sleep 2
-done
+# Path to the Python script
+PYTHON_SCRIPT="$SCRIPT_DIR/start_reolink.py"
 
-# Wait for default route
-for i in {1..30}; do
-  ip route | grep -q '^default ' && break
-  sleep 1
-done
+echo "$(date) - Starting Reolink VLC stream..."
 
-# Pick the first camera IP that answers on 554
-CAM_IP=""
-for ip in "${CAM_IPS[@]}"; do
-  if nc -z -w1 "$ip" 554 2>/dev/null; then CAM_IP="$ip"; break; fi
-done
-
-if [ -z "$CAM_IP" ]; then
-  echo "$(date) no camera answering on 554; will still try VLC loop�" >> "$LOG"
+# Check if the Python script exists
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "$(date) - ERROR: Python script not found at $PYTHON_SCRIPT" >&2
+    exit 1
 fi
 
-URL="rtsp://${USER}:${PASS}@${CAM_IP:-${CAM_IPS[0]}}:554/${RTSP_PATH}"
-
-# Run VLC in a retry loop so it recovers from drops
-while true; do
-  echo "$(date) launching VLC ? $URL" >> "$LOG"
-  cvlc --fullscreen --no-video-title-show --network-caching=300 "$URL"
-  echo "$(date) VLC exited; retrying in 5s�" >> "$LOG"
-  sleep RETRY_INTERVAL
-done
+# Run the Python script
+# The Python script handles logging, network checks, and VLC process management.
+"$PYTHON_SCRIPT"

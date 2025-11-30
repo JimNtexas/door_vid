@@ -15,7 +15,10 @@ from logging.handlers import RotatingFileHandler
 CAM_IPS = os.getenv("REOLINK_IPS", "192.168.86.27,192.168.86.24").split(",")
 RTSP_PATH = os.getenv("REOLINK_RTSP_PATH", "h264Preview_01_main")
 USER = os.getenv("REOLINK_USER", "admin")
-PASS = os.getenv("REOLINK_PASS", "CHANGE_ME")  # <-- set via env!
+PASS = os.getenv("REOLINK_PASS")
+if not PASS:
+    logger.critical("FATAL: REOLINK_PASS environment variable not set.")
+    sys.exit(1)
 RTSP_PORT = int(os.getenv("REOLINK_RTSP_PORT", "554"))
 NETWORK_CACHING_MS = int(os.getenv("REOLINK_CACHING_MS", "800"))  # 300–1000 typical
 FULLSCREEN = os.getenv("REOLINK_FULLSCREEN", "1") == "1"

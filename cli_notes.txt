@@ -1,0 +1,86 @@
+To make your Raspberry Pi 4 run the script at boot, you can use a systemd service, which is the standard and most reliable method for managing services on modern Linux systems. It's more robust than older methods like cron or /etc/rc.local.
+
+1. Create the Script File
+First, ensure your Python script is executable and in a stable location.
+
+Save the script: Save the Python code I provided in a file named start_reolink.py in a directory like /home/pi/.
+
+Make it executable: Open a terminal and run the following command to give the script execution permissions.
+
+Bash
+
+chmod +x /home/pi/start_reolink.py
+Test the script: Run it manually to ensure it works as expected before setting up the service.
+
+Bash
+
+python3 /home/pi/start_reolink.py
+2. Create the Systemd Service File
+Next, you'll create a .service file that tells systemd how to run and manage your script.
+
+Create the file: Use a text editor like nano to create a new service file in the /etc/systemd/system/ directory. You'll need sudo for this.
+
+Bash
+
+sudo nano /etc/systemd/system/reolink-stream.service
+Add the content: Paste the following configuration into the file.
+
+Ini, TOML
+
+[Unit]
+Description=Reolink RTSP Stream Viewer
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/
+ExecStart=/usr/bin/python3 /home/pi/start_reolink.py
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+Description: door bell video
+
+After=network-online.target: 
+
+Type=simple: Specifies that this is a simple, single-process service.
+
+User=pi: Runs the script as the pi user, which is important for file permissions and screen access.
+
+ExecStart: The command that systemd will execute to start your script.
+
+Restart=always: This is a key line. It tells systemd to automatically restart the service if it ever crashes or exits for any reason.
+
+RestartSec=5s: Specifies a 5-second delay before restarting.
+
+WantedBy=multi-user.target: This line ensures the service is started automatically when the system boots up to a multi-user environment.
+
+Save and exit: Press Ctrl + O to save the file, then Enter, and finally Ctrl + X to exit nano.
+
+3. Enable and Start the Service
+Finally, you need to enable and start the service so it runs on boot.
+
+Reload systemd: Tell systemd to reread its configuration files, including the new one you just created.
+
+Bash
+
+sudo systemctl daemon-reload
+Enable the service: This creates a symlink that ensures the service starts at boot.
+
+Bash
+
+sudo systemctl enable reolink-stream.service
+Start the service: Start the service for the first time without needing to reboot.
+
+Bash
+
+sudo systemctl start reolink-stream.service
+You can check the status of your service at any time with the command:
+
+Bash
+
+
+
+This will show you if the service is active, running, and any recent log messages, which is very helpful for debugging.
